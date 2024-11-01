@@ -1,0 +1,28 @@
+image: registry.gitlab.com/TODO:latest
+
+unit-test:
+  stage: test
+  script:
+    - python3 --version
+    - pip --version
+    - java -version
+    - pytest --junitxml=test-unit.xml
+  rules:
+    - when: on_success # mandatory to ensure this job can be called by parent cicd on merge request
+
+integration-test:
+  stage: test
+  environment: dev
+  #need: unit-test
+  variables:
+    DATABRICKS_HOST: https://adb-xxxx.xx.azuredatabricks.net
+    DATABRICKS_CLIENT_ID: "${SP_CLIENT_ID}"
+    DATABRICKS_CLIENT_SECRET: "${SP_CLIENT_SECRET}"
+  script:
+    - cd mlops_example_1
+    - databricks bundle validate -t mlops_int
+    - databricks bundle deploy -t mlops_int  
+    - databricks bundle run write_feature_table_job -t mlops_int     
+    - databricks bundle run model_training_job -t mlops_int   
+  rules:
+    - when: on_success # mandatory to ensure this job can be called by parent cicd on merge request
